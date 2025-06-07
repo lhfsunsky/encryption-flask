@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>加密文件夹浏览</title>
+</head>
+<body>
+    <h1>📁 根目录</h1>
+
+    <h2>文件夹</h2>
+    <ul>
+    {% for folder in folders %}
+        <li><a href="{{ url_for('browse', folder=folder) }}">{{ folder }}</a></li>
+    {% else %}
+        <li>无文件夹</li>
+    {% endfor %}
+    </ul>
+
+    <h2>文件</h2>
+    <ul>
+    {% for file in files %}
+        <li><a href="{{ url_for('preview', path=file) }}">{{ file }}</a></li>
+    {% else %}
+        <li>无文件</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

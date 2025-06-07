@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>本地文件解密器（RSA + AES）</title>
+</head>
+<body>
+  <h2>本地文件解密器（RSA-OAEP 解密 AES 密钥 + AES-CBC 解密文件）</h2>
+
+  <p>
+    1. 上传 RSA 私钥（PKCS#8 PEM 格式）：<br />
+    <input type="file" id="privateKeyFile" accept=".pem" />
+  </p>
+
+  <p>
+    2. 上传加密的 AES 密钥包（Base64 编码文本文件）：<br />
+    <input type="file" id="encryptedAESKeyFile" accept=".txt,.b64" />
+  </p>
+
+  <p>
+    3. 上传用 AES 加密的文件（ArrayBuffer 文件）：<br />
+    <input type="file" id="encryptedFile" />
+  </p>
+
+  <button id="decryptBtn">开始解密</button>
+
+  <pre id="log"></pre>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + '\n';
+    };
+
+    // PEM 转 ArrayBuffer
+    function pemToArrayBuffer(pem) {
+      const b64 = pem
+        .replace(/-----BEGIN PRIVATE KEY-----/, '')
+        .replace(/-----END PRIVATE KEY-----/, '')
+        .replace(/\s/g, '');
+      const binary = atob(b64);
+      const buffer = new ArrayBuffer(binary.length);
+      const view = new Uint8Array(buffer);
+      for (let i = 0; i < binary.length; i++) {
+        view[i] = binary.charCodeAt(i);
+      }
+      return buffer;
+    }
+
+    async function readFileAsText(input) {
+      return new Promise((resolve, reject) => {
+        const file = input.files[0];
+        if (!file) reject('未选择文件');
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject('读取文件失败');
+        reader.readAsText(file);
+      });
+    }
+
+    async function readFileAsArrayBuffer(input) {
+      return new Promise((resolve, reject) => {
+        const file = input.files[0];
+        if (!file) reject('未选择文件');
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject('读取文件失败');
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    async function importPrivateKey(pem) {
+      const keyBuffer = pemToArrayBuffer(pem);
+      return crypto.subtle.importKey(
+        'pkcs8',
+        keyBuffer,
+        {
+          name: 'RSA-OAEP',
+          hash: 'SHA-256',
+        },
+        false,
+        ['decrypt']
+      );
+    }
+
+    async function decryptRSA(privateKey, encryptedKeyBase64) {
+      const encryptedKey = Uint8Array.from(atob(encryptedKeyBase64), c => c.charCodeAt(0));
+      const decryptedKeyBuffer = await crypto.subtle.decrypt(
+        { name: 'RSA-OAEP' },
+        privateKey,
+        encryptedKey
+      );
+      return decryptedKeyBuffer;
+    }
+
+    async function importAESKey(rawKeyBuffer) {
+      return crypto.subtle.importKey(
+        'raw',
+        rawKeyBuffer,
+        { name: 'AES-CBC' },
+        false,
+        ['decrypt']
+      );
+    }
+
+    async function decryptAES(aesKey, iv, encryptedData) {
+      return crypto.subtle.decrypt(
+        { name: 'AES-CBC', iv: iv },
+        aesKey,
+        encryptedData
+      );
+    }
+
+    function downloadArrayBuffer(buffer, filename) {
+      const blob = new Blob([buffer]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'decrypted_file';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('decryptBtn').onclick = async () => {
+      try {
+        log('开始读取私钥...');
+        const pem = await readFileAsText(document.getElementById('privateKeyFile'));
+        const privateKey = await importPrivateKey(pem);
+        log('私钥导入成功');
+
+        log('读取加密的 AES 密钥包...');
+        const encryptedAESKeyText = await readFileAsText(document.getElementById('encryptedAESKeyFile'));
+        const encryptedAESKeyBase64 = encryptedAESKeyText.trim();
+        log('AES 密钥包读取成功');
+
+        log('解密 AES 密钥包...');
+        const aesKeyRaw = await decryptRSA(privateKey, encryptedAESKeyBase64);
+        log('AES 密钥解密成功');
+
+        const aesKey = await importAESKey(aesKeyRaw);
+
+        log('读取加密文件...');
+        const encryptedFileBuffer = await readFileAsArrayBuffer(document.getElementById('encryptedFile'));
+
+        // 假设前16字节是 IV，剩余是加密数据
+        const iv = new Uint8Array(encryptedFileBuffer.slice(0, 16));
+        const encryptedData = encryptedFileBuffer.slice(16);
+
+        log('用 AES 解密文件...');
+        const decryptedBuffer = await decryptAES(aesKey, iv, encryptedData);
+        log('解密完成，准备下载');
+
+        downloadArrayBuffer(decryptedBuffer, 'decrypted_output');
+
+        log('文件已下载');
+      } catch (e) {
+        log('错误: ' + e);
+      }
+    };
+  </script>
+</body>
+</html>

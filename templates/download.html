@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>加密完成</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f0f8ff; padding: 30px; border-radius: 10px; text-align: center; }
+        h1 { color: #4CAF50; }
+        .actions { margin: 30px 0; }
+        .btn { 
+            display: inline-block; padding: 12px 25px; margin: 10px;
+            background: #4CAF50; color: white; text-decoration: none;
+            border-radius: 4px; font-size: 16px; 
+        }
+        .btn-play { background: #2196F3; }
+        .warning { color: #ff5722; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>视频加密成功！</h1>
+        <p>原始文件名: <strong>{{ original_name }}</strong></p>
+        <p>文件ID: <code>{{ file_id }}</code></p>
+        
+        <div class="warning">
+            重要提示：请保存好此文件ID和密码！没有密码无法解密视频
+        </div>
+        
+        <div class="actions">
+            <a href="/download/{{ file_id }}" class="btn">下载加密文件</a>
+            <a href="/player/{{ file_id }}" class="btn btn-play">在线播放</a>
+            <a href="/" class="btn">返回首页</a>
+        </div>
+    </div>
+</body>
+</html>

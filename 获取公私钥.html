@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>浏览器生成RSA密钥对示例</title>
+</head>
+<body>
+  <h2>浏览器生成 RSA 密钥对</h2>
+  <button id="generateBtn">生成密钥对</button>
+
+  <h3>公钥（PEM格式）</h3>
+  <textarea id="publicKeyPem" rows="10" cols="70"></textarea>
+  <br />
+  <button id="downloadPublic">下载公钥</button>
+
+  <h3>私钥（PEM格式）</h3>
+  <textarea id="privateKeyPem" rows="10" cols="70"></textarea>
+  <br />
+  <button id="downloadPrivate">下载私钥</button>
+
+  <script>
+    // ArrayBuffer 转 Base64
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let b of bytes) {
+        binary += String.fromCharCode(b);
+      }
+      return window.btoa(binary);
+    }
+
+    // Base64 转 PEM 格式
+    function formatPem(base64String, type) {
+      const lineLength = 64;
+      let lines = [];
+      for (let i = 0; i < base64String.length; i += lineLength) {
+        lines.push(base64String.substr(i, lineLength));
+      }
+      return `-----BEGIN ${type}-----\n${lines.join('\n')}\n-----END ${type}-----\n`;
+    }
+
+    document.getElementById('generateBtn').onclick = async () => {
+      const keyPair = await window.crypto.subtle.generateKey(
+        {
+          name: "RSA-OAEP",
+          modulusLength: 2048,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: "SHA-256",
+        },
+        true, // 可导出
+        ["encrypt", "decrypt"]
+      );
+
+      // 导出公钥 SPKI 格式
+      const spki = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+      const spkiB64 = arrayBufferToBase64(spki);
+      const publicPem = formatPem(spkiB64, "PUBLIC KEY");
+
+      // 导出私钥 PKCS8 格式
+      const pkcs8 = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+      const pkcs8B64 = arrayBufferToBase64(pkcs8);
+      const privatePem = formatPem(pkcs8B64, "PRIVATE KEY");
+
+      document.getElementById('publicKeyPem').value = publicPem;
+      document.getElementById('privateKeyPem').value = privatePem;
+    };
+
+    // 下载文本文件
+    function download(filename, text) {
+      const element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+
+      element.style.display = 'none';
+      document.body.appendChild(element);
+
+      element.click();
+
+      document.body.removeChild(element);
+    }
+
+    document.getElementById('downloadPublic').onclick = () => {
+      const text = document.getElementById('publicKeyPem').value;
+      if (text) download('public_key.pem', text);
+    };
+
+    document.getElementById('downloadPrivate').onclick = () => {
+      const text = document.getElementById('privateKeyPem').value;
+      if (text) download('private_key.pem', text);
+    };
+  </script>
+</body>
+</html>

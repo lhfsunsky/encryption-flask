@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ folder }} 内容</title>
+    <style>
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .item img {
+            height: 300px;       /* 固定高度 */
+           width: auto;         /* 宽度自动 */
+    	object-fit: contain; /* 保证完整显示，无裁剪 */
+    	display: block;      /* 避免图片下方多余空隙 */
+    	margin: 0 auto;      /* 居中显示 */
+        }
+    </style>
+</head>
+<body>
+    <h1>📁 {{ folder }} 中的文件</h1>
+    <a href="{{ url_for('index') }}">⬅ 返回</a>
+    <div class="gallery">
+    {% for f in files %}
+        {% if f.endswith('.jpg.enc') or f.endswith('.png.enc') or f.endswith('.jpeg.enc') %}
+        <div class="item">
+            <a href="{{ url_for('preview', path=f) }}">
+                <img src="{{ url_for('get_file', path=f) }}" alt="{{ f }}">
+            </a>
+            <div>{{ f.split('/')[-1] }}</div>
+        </div>
+        {% else %}
+        <div class="item">
+            <a href="{{ url_for('preview', path=f) }}">{{ f.split('/')[-1] }}</a>
+        </div>
+        {% endif %}
+    {% endfor %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>文件预览</title>
+</head>
+<body>
+    <h1>文件预览</h1>
+
+    {% set ext = path[:-4].lower() if path.endswith('.enc') else path.lower() %}
+
+    {% if ext.endswith('.mp4') %}
+        <video controls width="640" src="{{ url_for('get_file', path=path) }}"></video>
+    {% elif ext.endswith('.mp3') %}
+        <audio controls src="{{ url_for('get_file', path=path) }}"></audio>
+    {% elif ext.endswith(('.png', '.jpg', '.jpeg')) %}
+        <img src="{{ url_for('get_file', path=path) }}" style="max-width:100%;">
+    {% elif ext.endswith('.pdf') %}
+        <iframe src="{{ url_for('get_file', path=path) }}" width="100%" height="600px"></iframe>
+    {% else %}
+        <p>暂不支持该类型文件的预览</p>
+    {% endif %}
+
+    <p><a href="{{ url_for('index') }}">返回首页</a></p>
+</body>
+</html>
